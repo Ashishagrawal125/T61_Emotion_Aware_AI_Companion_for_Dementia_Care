@@ -97,7 +97,7 @@ Database → Dashboard → Caregiver
 | /api/dashboard/emotions     | GET    | Get Emotion History     |
 
 ---
-
+```
 ## 📁 Project Structure
 
 emotion-ai-companion/
@@ -124,7 +124,7 @@ emotion-ai-companion/
 ├── tests/
 │
 └── README.md
-
+```
 
 ---
 
