@@ -10,8 +10,8 @@ num_classes = 5
 img_rows,img_cols = 48,48
 batch_size = 32
 
-train_data_dir = '/Users/durgeshthakur/Deep Learning Stuff/Emotion Classification/fer2013/train'
-validation_data_dir = '/Users/durgeshthakur/Deep Learning Stuff/Emotion Classification/fer2013/validation'
+train_data_dir = '/Deep Learning Stuff/Emotion Classification/fer2013/train'
+validation_data_dir = '/Deep Learning Stuff/Emotion Classification/fer2013/validation'
 
 train_datagen = ImageDataGenerator(
 					rescale=1./255,
@@ -110,6 +110,7 @@ model.add(Activation('softmax'))
 
 print(model.summary())
 
+#optimizers
 from keras.optimizers import RMSprop,SGD,Adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 
@@ -149,6 +150,7 @@ history=model.fit_generator(
                 callbacks=callbacks,
                 validation_data=validation_generator,
                 validation_steps=nb_validation_samples//batch_size)
+
 
 
 
