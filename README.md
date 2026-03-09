@@ -161,48 +161,75 @@ MODEL_API_KEY=yourkey
 ```
 ---
 🧪 Testing
+
 Run tests using:
+
 pytest
+
 npm test
+
 npx playwright test
 ---
 🔐 Security & Privacy
+
 Role-based authentication
+
 Encrypted credentials
+
 Anonymized patient data
+
 Secure API access
+
 No medical diagnosis
 ---
 📅 Development Timeline
+
 Week 1–2: Requirements & Design
+
 Week 3–4: Backend & Emotion Engine
+
 Week 5–6: AI Integration & Dashboard
+
 Week 7: Testing & Optimization
+
 Week 8: Final Release
 ---
 ⚠️ Limitations
+
 Prototype-level deployment
+
 Limited real patient data
+
 No clinical validation
+
 Web-based version only (v1)
 ---
   👥 Team
 Name	    Role
 Ashish	Project Lead
+
 Ashish	ML Engineer
+
 Shruti	Backend Developer
+
 Aashi	  QA & Documentation
 ---
 📜 Compliance
 Academic Research Project
+
 Institutional Ethics Guidelines
+
 No Third-Party Data Sharing
+
 No Clinical Decision Making
 ---
 📈 Future Enhancements
 Mobile App Support
+
 Advanced Emotion Models
+
 Multilingual Support
+
 Wearable Integration
 ---
 Real-time Medical Alerts
