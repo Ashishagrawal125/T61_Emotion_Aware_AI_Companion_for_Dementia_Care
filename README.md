@@ -126,7 +126,7 @@ emotion-ai-companion/
 └── README.md
 ```
 
-
+```
 
 ## ⚙️ Installation & Setup
 
@@ -205,7 +205,7 @@ Wearable Integration
 
 Real-time Medical Alerts
 ⭐ If you find this project useful, please star the repository!
-
+```
 
 ---
 
