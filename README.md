@@ -126,7 +126,7 @@ emotion-ai-companion/
 └── README.md
 ```
 
----
+
 
 ## ⚙️ Installation & Setup
 
@@ -137,15 +137,15 @@ emotion-ai-companion/
 - Git
 
 ### Clone Repository
-
-```bash
 git clone https://github.com/your-username/emotion-ai-companion.git
 cd emotion-ai-companion
-Backend Setup
+
+  Backend Setup
 cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload
-Frontend Setup
+
+  Frontend Setup
 cd frontend
 npm install
 npm start
@@ -157,88 +157,56 @@ DB_USER=root
 DB_PASS=yourpassword
 JWT_SECRET=yourkey
 MODEL_API_KEY=yourkey
+
 🧪 Testing
 Run tests using:
-
 pytest
 npm test
 npx playwright test
+
 🔐 Security & Privacy
 Role-based authentication
-
 Encrypted credentials
-
 Anonymized patient data
-
 Secure API access
-
 No medical diagnosis
 
 📅 Development Timeline
 Week 1–2: Requirements & Design
-
 Week 3–4: Backend & Emotion Engine
-
 Week 5–6: AI Integration & Dashboard
-
 Week 7: Testing & Optimization
-
 Week 8: Final Release
 
 ⚠️ Limitations
 Prototype-level deployment
-
 Limited real patient data
-
 No clinical validation
-
 Web-based version only (v1)
 
-👥 Team
-Name	Role
+  👥 Team
+Name	    Role
 Ashish	Project Lead
 Ashish	ML Engineer
 Shruti	Backend Developer
-Aashi	QA & Documentation
+Aashi	  QA & Documentation
+
 📜 Compliance
 Academic Research Project
-
 Institutional Ethics Guidelines
-
 No Third-Party Data Sharing
-
 No Clinical Decision Making
 
 📈 Future Enhancements
 Mobile App Support
-
 Advanced Emotion Models
-
 Multilingual Support
-
 Wearable Integration
 
 Real-time Medical Alerts
-
-📄 License
-This project is for academic and research purposes.
-
-© 2026 Team Sigma
-
-📬 Contact
-For queries or collaboration:
-
-📧 Email: your-email@example.com
-📌 GitHub: https://github.com/your-username
-
 ⭐ If you find this project useful, please star the repository!
 
 
 ---
 
-If you want, I can next help you:
 
-✅ Customize this for **your real GitHub username**  
-✅ Add **badges (build, license, stars, etc.)**  
-✅ Create a **professional project logo**  
-✅ Optimize it for **college submission**
