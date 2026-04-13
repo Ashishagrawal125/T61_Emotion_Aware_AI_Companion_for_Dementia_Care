@@ -1,0 +1,27 @@
+{
+  "patients": {
+    "p001": {
+      "name": "Shanti Devi",
+      "preferred_name": "Dadi",
+      "family_members": [
+        "Aashi",
+        "Rohit",
+        "Neha"
+      ],
+      "favorite_food": "tea",
+      "favorite_song": "old songs",
+      "hometown": "Mathura",
+      "daily_routine": "Morning walk, breakfast, rest, prayer in evening",
+      "important_notes": "Patient feels calm when spoken to softly and reminded about family.",
+      "likes": [
+        "old songs",
+        "family photos",
+        "light conversation"
+      ],
+      "dislikes": [
+        "loud sounds",
+        "rushed questions"
+      ]
+    }
+  }
+}

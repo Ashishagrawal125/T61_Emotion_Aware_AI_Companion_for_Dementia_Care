@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emotion-Aware AI Companion</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f7f7fb;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    input, textarea, button, select {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    pre {
+      background: #111827;
+      color: #f9fafb;
+      padding: 14px;
+      border-radius: 10px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Emotion-Aware AI Companion</h1>
+
+  <div class="card">
+    <h2>Combined Interaction Test</h2>
+    <label>Patient ID</label>
+    <input type="text" id="patientId" value="p001" />
+
+    <label>Message</label>
+    <textarea id="message" rows="4" placeholder="Enter patient message..."></textarea>
+
+    <button onclick="sendMessage()">Generate Response</button>
+  </div>
+
+  <div class="card">
+    <h2>Output</h2>
+    <pre id="output">Response will appear here...</pre>
+  </div>
+
+  <script>
+    async function sendMessage() {
+      const patientId = document.getElementById("patientId").value;
+      const message = document.getElementById("message").value;
+      const output = document.getElementById("output");
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/api/interaction/respond", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            patient_id: patientId,
+            message: message
+          })
+        });
+
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = "Error: " + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
