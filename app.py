@@ -1,909 +1,424 @@
-import streamlit as st
-from transformers import pipeline
-from streamlit_mic_recorder import mic_recorder
+import os
+import uuid
+import time
+import tempfile
+from pathlib import Path
+
 import cv2
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from PIL import Image
-import os
-import uuid
-import tempfile
-import whisper
-import tensorflow as tf
-from tensorflow.keras.preprocessing.image import img_to_array
-from PIL import Image
-import numpy as np
-import time
-import json
-import Sarvam_STT
-import Google_Translate
-import tts_tutorial
-from deepface import DeepFace
+import streamlit as st
 from transformers import pipeline
+from streamlit_mic_recorder import mic_recorder
+from deepface import DeepFace
 
-# Set page config
+import Google_Translate
+import Sarvam_STT
+import tts_tutorial
+
+APP_TITLE = "Clara AI - Emotion Aware Companion"
+RECORDINGS_DIR = Path("recordings")
+IMAGES_DIR = Path("images")
+RECORDINGS_DIR.mkdir(exist_ok=True)
+IMAGES_DIR.mkdir(exist_ok=True)
+
 st.set_page_config(
-    page_title="Clara",
+    page_title="Clara AI",
     page_icon="🧠",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# Custom CSS with animations and beautiful styling
-st.markdown("""
+st.markdown(
+    """
     <style>
-    .main {
-        padding: 2rem;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
+    .main {background: linear-gradient(135deg, #f7f8fc 0%, #eef2ff 100%);} 
     .stButton>button {
-        width: 100%;
-        margin-top: 1rem;
-        background: linear-gradient(45deg, #FF6B6B, #FF8E53);
-        color: white;
-        border: none;
-        border-radius: 25px;
-        padding: 10px 20px;
-        font-weight: bold;
-        transition: all 0.3s ease;
+        width: 100%; border-radius: 16px; border: none; padding: 0.7rem 1rem;
+        background: linear-gradient(90deg, #6d5efc 0%, #ff6b8a 100%);
+        color: white; font-weight: 600;
     }
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+    .card {
+        background: white; padding: 1.2rem; border-radius: 18px; 
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08); margin-bottom: 1rem;
     }
-    .result-box {
-        padding: 1.5rem;
-        border-radius: 15px;
-        background: white;
-        margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-        color: #2c3e50;
-    }
-    .result-box:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-    }
-    .stTabs {
-        margin: 0 auto;
-        max-width: 1200px;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2rem;
-        justify-content: center !important;
-        display: flex !important;
-        width: 100%;
-    }
-    .stTabs [data-baseweb="tab"] {
-        flex: 1;
-        max-width: 300px;
-        min-width: 200px;
-        text-align: center;
-        margin: 0 10px;
-        background-color: white;
-        border-radius: 20px;
-        padding: 10px 20px;
-        transition: all 0.3s ease;
-        color: #2c3e50;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: #FF6B6B;
-        color: white;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF6B6B !important;
-        color: white !important;
-    }
-    .feature-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin: 1rem 0;
-        transition: all 0.3s ease;
-        color: #2c3e50;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-    .feature-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-    }
-    .camera-feed {
-        margin: 0 auto;
-        max-width: 800px;
-        width: 100%;
-    }
-    .emotion-indicator {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: rgba(255, 107, 107, 0.9);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 15px;
-        font-weight: bold;
-    }
-    p, h1, h2, h3, h4, h5, h6 {
-        color: #2c3e50;
+    .hero {
+        background: linear-gradient(90deg, #6d5efc 0%, #9d7cff 50%, #ff6b8a 100%);
+        color: white; padding: 1.5rem; border-radius: 20px; margin-bottom: 1rem;
     }
     </style>
-""", unsafe_allow_html=True)
-# Initialize session state variables
-if 'camera_running' not in st.session_state:
-    st.session_state.camera_running = False
-if 'frame_placeholder' not in st.session_state:
-    st.session_state.frame_placeholder = None
-if 'camera_thread' not in st.session_state:
-    st.session_state.camera_thread = None
+    """,
+    unsafe_allow_html=True,
+)
 
-# Emotion labels
-emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
-def ask_model(messages):
-    try:
-        user_input = messages[-1]["content"]
 
-        prompt = f"""
-                    You are a highly empathetic mental health support assistant.
+def init_state() -> None:
+    defaults = {
+        "chat_history": [],
+        "voice_chat_history": [],
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
-                    The user is sharing personal feelings. Your job is to:
-                    - Respond with empathy
-                    - Validate their emotions
-                    - Give supportive advice
-                    - Be calm, kind, and human-like
-                    - NEVER judge or question harshly
 
-                    User: {user_input}
-                    Assistant:
-                    """
-        inputs = chat_tokenizer(prompt, return_tensors="pt", truncation=True)
+init_state()
 
-        outputs = chat_model.generate(
-            **inputs,
-            max_length=150,
-            do_sample=True,
-            temperature=0.95,
-            top_p=0.92,
-            repetition_penalty=1.2
-        )
-        reply = chat_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        # Clean unwanted parts
-        if "Assistant:" in reply:
-            reply = reply.split("Assistant:")[-1].strip()
+@st.cache_resource(show_spinner=False)
+def get_face_detector():
+    cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    if cascade.empty():
+        raise RuntimeError("Failed to load Haar cascade for face detection.")
+    return cascade
 
-        # Remove bad robotic patterns
-        bad_patterns = ["why are you", "i am a", "you are a"]
 
-        if any(p in reply.lower() for p in bad_patterns):
-            return "I'm really sorry you're feeling this way. It sounds like you're going through something heavy. I'm here for you—do you want to talk more about what's been stressing you?"
-
-        # Ensure empathetic tone
-        if len(reply.split()) < 5:
-            return "I hear you. It sounds like things have been tough lately. You don’t have to handle it alone—I'm here to listen."
-
-        return reply.strip()
-
-    except Exception as e:
-        return f"Error: {str(e)}"
-    
-def annotate_emotions(input_data):
-
-    # Handle both file path and image input
-    if isinstance(input_data, str):
-        frame = cv2.imread(input_data)
-    else:
-        frame = np.array(input_data)
-
-    if frame is None:
-        return None
-
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    annotated_frame = frame.copy()
-
-    faces = face_cascade.detectMultiScale(
-        gray,
-        scaleFactor=1.1,
-        minNeighbors=5,
-        minSize=(30, 30),
-        flags=cv2.CASCADE_SCALE_IMAGE
+@st.cache_resource(show_spinner=False)
+def get_sentiment_model():
+    return pipeline(
+        "text-classification",
+        model="SamLowe/roberta-base-go_emotions",
+        top_k=5,
+        truncation=True,
     )
 
+
+@st.cache_resource(show_spinner=False)
+def get_chatbot():
+    return pipeline(
+        "text2text-generation",
+        model="google/flan-t5-base",
+        max_new_tokens=120,
+    )
+
+
+face_cascade = get_face_detector()
+sentiment_model = get_sentiment_model()
+chatbot = get_chatbot()
+
+
+def analyze_face_emotions(image_bgr: np.ndarray):
+    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+    annotated = image_bgr.copy()
+    detections = []
+
     for (x, y, w, h) in faces:
-        # Draw rectangle
-        cv2.rectangle(annotated_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-        # Extract ORIGINAL face (not processed)
-        face = frame[y:y + h, x:x + w]
-
+        face = image_bgr[y : y + h, x : x + w]
         try:
-            result = DeepFace.analyze(face, actions=['emotion'], enforce_detection=False)
-            emotion = result[0]['dominant_emotion']
-        except:
-            emotion = "Unknown"
+            result = DeepFace.analyze(face, actions=["emotion"], enforce_detection=False)
+            if isinstance(result, list):
+                result = result[0]
+            emotion = result.get("dominant_emotion", "unknown")
+            score = result.get("emotion", {}).get(emotion, 0.0)
+        except Exception:
+            emotion = "unknown"
+            score = 0.0
 
-        # Put text
+        detections.append({"emotion": emotion, "score": score})
+        cv2.rectangle(annotated, (x, y), (x + w, y + h), (80, 200, 120), 2)
         cv2.putText(
-            annotated_frame,
-            emotion,
-            (x, y - 10),
+            annotated,
+            f"{emotion}",
+            (x, max(25, y - 10)),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.9,
-            (225, 0, 200),
-            2
+            0.8,
+            (255, 255, 255),
+            2,
         )
 
-    return annotated_frame
-# Camera loop function
-def camera_loop():
+    return annotated, detections
+
+
+EMOJI_MAP = {
+    "joy": "😄",
+    "sadness": "😢",
+    "anger": "😠",
+    "fear": "😨",
+    "surprise": "😮",
+    "love": "❤️",
+    "caring": "🤗",
+    "gratitude": "🙏",
+    "nervousness": "😬",
+    "confusion": "😕",
+    "neutral": "😐",
+    "optimism": "😊",
+    "disappointment": "😞",
+}
+
+
+def analyze_text_emotion(text: str):
+    results = sentiment_model(text)
+    if results and isinstance(results[0], list):
+        results = results[0]
+    cleaned = sorted(results, key=lambda x: x["score"], reverse=True)
+    return cleaned[:5]
+
+
+SAFE_RESPONSE_FALLBACK = (
+    "I am here with you. It sounds like things feel heavy right now. "
+    "Take one slow breath with me. You can tell me what happened, and we can go one step at a time."
+)
+
+
+def build_supportive_reply(user_text: str) -> str:
+    prompt = (
+        "You are Clara, a calm and empathetic companion for dementia care support. "
+        "Reply in simple, warm, non-judgmental language. Keep the answer short, supportive, and safe. "
+        "Do not claim to diagnose medical issues. User message: "
+        + user_text
+    )
     try:
-        while st.session_state.camera_running:
-            # Capture frame from webcam
-            frame = st.camera_input("Camera Feed", key="live_camera")
-            
-            if frame is not None:
-                # Convert the frame to a PIL image
-                frame = Image.open(frame)
-                
-                # Annotate emotions on the frame
-                annotated_frame = annotate_emotions(frame)
-                
-                # Display the annotated frame in the placeholder
-                if st.session_state.frame_placeholder is not None:
-                    st.session_state.frame_placeholder.image(annotated_frame, caption="Live Feed with Emotion Detection", use_container_width=True)
-            
-            time.sleep(0.1)
-    finally:
-        pass
-
-# Initialize models
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-import torch
-
-@st.cache_resource
-def load_chatbot():
-    model_name = "google/flan-t5-large"
-    
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-    
-    return tokenizer, model
-
-chat_tokenizer, chat_model = load_chatbot()
-
-chatbot = load_chatbot()
-chatbot = load_chatbot()
-def load_models():
-    try:
-        # Load face cascade first as it's essential
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        #classifier = tf.keras.models.load_model('models/ResNet50_Transfer_Learning.keras')
-        classifier = "deepface"
-        if face_cascade.empty():
-            st.error("Error loading face detection model")
-            return (None, None), (None, None)
+        output = chatbot(prompt)[0]["generated_text"].strip()
+        return output if len(output.split()) >= 6 else SAFE_RESPONSE_FALLBACK
+    except Exception:
+        return SAFE_RESPONSE_FALLBACK
 
 
-        # Load sentiment analysis model
-        try:
-            model = whisper.load_model("base")
-            sentiment_analysis = pipeline("sentiment-analysis", framework="pt", model="SamLowe/roberta-base-go_emotions")
-            # sentiment_analysis = pipeline("sentiment-analysis", model="cardiffnlp/twitter-xlm-roberta-base-sentiment")  shitttt
 
-            return (sentiment_analysis, model), (face_cascade, classifier)
-        except Exception as e:
-            st.error(f"Error loading sentiment analysis model: {str(e)}")
-            return (None, None), (None, None)
+def render_sentiment_block(text: str):
+    sentiments = analyze_text_emotion(text)
+    if not sentiments:
+        st.warning("No sentiment result generated.")
+        return
 
-        return (sentiment_analysis, model), (face_cascade, classifier)
-    except Exception as e:
-        st.error(f"Error loading models: {str(e)}")
-        return (None, None), (None, None)
+    top = sentiments[0]
+    emoji = EMOJI_MAP.get(top["label"], "🙂")
+    st.success(f"Top emotion from voice text: {top['label'].title()} {emoji} ({top['score']:.2f})")
 
-# Create models directory if it doesn't exist
-os.makedirs("models", exist_ok=True)
+    lines = []
+    for item in sentiments:
+        emoji = EMOJI_MAP.get(item["label"], "🙂")
+        lines.append(f"- {item['label'].title()} {emoji}: {item['score']:.2f}")
+    st.markdown("\n".join(lines))
 
-# Load models at startup
-with st.spinner("Loading models..."):
-    a,b = load_models()
 
-    (sentiment_analysis,model) = a
-    (face_cascade,classifier) = b
 
-if not face_cascade:
-    st.error("Failed to load face detection model. Please check your OpenCV installation.")
-    st.stop()
-if not classifier:
-    st.error("Failed to load classifier. Please check your OpenCV installation.")
-    st.stop()
+def save_audio_bytes(audio_bytes: bytes) -> str:
+    file_path = RECORDINGS_DIR / f"recording_{uuid.uuid4().hex}.wav"
+    with open(file_path, "wb") as f:
+        f.write(audio_bytes)
+    return str(file_path)
 
-if classifier is None:
-    st.error("Failed to load classifier.")
-    st.stop()
-if not model:
-    st.error("Failed to load whisper model. Please check your internet connection and try again.")
-    st.stop()
 
-# Header with gradient background
-st.markdown("""
-    <div class="header-container">
-        <h1 style="color: white;">🧠 Meet Clara – Your AI Emotional Companion</h1>
-        <p style="color: white;">Clara listens, understands, and supports you—anytime you need it.</p>
+st.markdown(
+    f"""
+    <div class="hero">
+        <h1>🧠 {APP_TITLE}</h1>
+        <p>Emotion detection, empathetic chat, multilingual voice support, and simple wellness insights.</p>
     </div>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
-# Feature cards
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown("""
-        <div class="feature-card">
-            <h3>🎤 Voice Analysis</h3>
-            <p>Record and analyze your voice to understand your emotional state</p>
-        </div>
-    """, unsafe_allow_html=True)
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown('<div class="card"><h3>🎤 Voice Analysis</h3><p>Record speech, transcribe it, translate if needed, and detect emotional tone.</p></div>', unsafe_allow_html=True)
+with c2:
+    st.markdown('<div class="card"><h3>📷 Facial Detection</h3><p>Upload images or use the camera to identify visible facial emotions.</p></div>', unsafe_allow_html=True)
+with c3:
+    st.markdown('<div class="card"><h3>💬 Supportive Chat</h3><p>Get calm, simple, human-like responses designed for emotional support.</p></div>', unsafe_allow_html=True)
 
-with col2:
-    st.markdown("""
-        <div class="feature-card">
-            <h3>👤 Facial Detection</h3>
-            <p>Real-time facial analysis to track your emotional expressions</p>
-        </div>
-    """, unsafe_allow_html=True)
 
-with col3:
-    st.markdown("""
-        <div class="feature-card">
-            <h3>❤️ Heart Rate Monitor</h3>
-            <p>Track your heart rate patterns for emotional insights</p>
-        </div>
-    """, unsafe_allow_html=True)
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🎤 Voice Analysis",
+    "📷 Facial Detection",
+    "❤️ Heart Rate",
+    "💬 AI Chat",
+    "🗣️ Voice Chat",
+])
 
-# Create centered container for all content
-st.markdown("""
-    <div style='display: flex; justify-content: center; width: 100%;'>
-        <div style='max-width: 1200px; width: 100%;'>
-""", unsafe_allow_html=True)
-
-# Create tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎤 Voice Analysis", "👤 Facial Detection", "❤️ Heart Rate Monitor","💬 AI Chat","🗣️ Voice Chat"])
-
-# Voice Analysis Tab
 with tab1:
-    st.header("Voice Analysis")
-    
-    # Voice recording section with better styling
-    st.markdown("""
-        <div class="feature-card">
-            <h3>Record Your Voice</h3>
-            <p>Speak naturally and let AI analyze your emotions</p>
-        </div>
-    """, unsafe_allow_html=True)
-    def analyze_sentiment(text):
-        results = sentiment_analysis(text)
-        sentiment_results = {result['label']: result['score'] for result in results}
-        return sentiment_results
+    st.subheader("Voice Analysis")
+    st.info("Record audio, then transcribe and analyze the emotional tone from text.")
 
-    def get_sentiment_emoji(sentiment):
-        # Define the emojis corresponding to each sentiment
-        emoji_mapping = {
-            "disappointment": "😞",
-            "sadness": "😢",
-            "annoyance": "😠",
-            "neutral": "😐",
-            "disapproval": "👎",
-            "realization": "😮",
-            "nervousness": "😬",
-            "approval": "👍",
-            "joy": "😄",
-            "anger": "😡",
-            "embarrassment": "😳",
-            "caring": "🤗",
-            "remorse": "😔",
-            "disgust": "🤢",
-            "grief": "😥",
-            "confusion": "😕",
-            "relief": "😌",
-            "desire": "😍",
-            "admiration": "😌",
-            "optimism": "😊",
-            "fear": "😨",
-            "love": "❤️",
-            "excitement": "🎉",
-            "curiosity": "🤔",
-            "amusement": "😄",
-            "surprise": "😲",
-            "gratitude": "🙏",
-            "pride": "🦁"
-        }
-        return emoji_mapping.get(sentiment, "")
+    audio = mic_recorder(
+        start_prompt="🎙️ Start Recording",
+        stop_prompt="⏹️ Stop Recording",
+        just_once=False,
+        use_container_width=True,
+        key="voice_analysis_recorder",
+    )
 
-    def display_sentiment_results(sentiment_results, option):
-        sentiment_text = ""
-        for sentiment, score in sentiment_results.items():
-            emoji = get_sentiment_emoji(sentiment)
-            if option == "Sentiment Only":
-                sentiment_text += f"{sentiment} {emoji}\n"
-            elif option == "Sentiment + Score":
-                sentiment_text += f"{sentiment} {emoji}: {score}\n"
-        return sentiment_text
+    if audio:
+        audio_bytes = audio["bytes"]
+        st.audio(audio_bytes, format="audio/wav")
+        file_path = save_audio_bytes(audio_bytes)
 
-    def inference(ans, sentiment_option):
-        sentiment_results = analyze_sentiment(ans)
-        sentiment_output = display_sentiment_results(sentiment_results, sentiment_option)
-        return sentiment_output
-    # Live recording
-    try:
-        audio = mic_recorder(
-            start_prompt="🎙️ Start Recording",
-            stop_prompt="⏹️ Stop Recording",
-            just_once=False,
-            use_container_width=True,
-            key='voice_recorder'
-        )
-        
-        if audio:
-            try:
-                recordings_folder = "recordings"
-                os.makedirs(recordings_folder, exist_ok=True)
-                unique_filename = f"recording_{uuid.uuid4().hex}.wav"
-                file_path = os.path.join(recordings_folder, unique_filename)
-                
-                # Save and play audio with better styling
-                audio_bytes = audio["bytes"]
-                st.markdown("""
-                    <div class="metric-container">
-                        <h4>🎵 Your Recording</h4>
-                """, unsafe_allow_html=True)
-                st.audio(audio_bytes, format="audio/wav")
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-                with open(file_path, "wb") as f:
-                    f.write(audio_bytes)
-        
-                # Analyze emotion directly from audio features
-                if st.button("🔍 Analyze Voice Emotion"):
-                    with st.spinner("Analyzing your voice..."):
-                        try:
-                            # For now, we'll use a simulated emotion detection
-                            # In a real implementation, you would use a voice emotion detection model
-                            
-                            st.markdown("### 📊 Analysis Results")
-                            st.markdown("#### Transcribing Audio...")
-                            results = Sarvam_STT.detect_and_translate(file_path)
-                            st.markdown(f"### {results['transcript']}")
-                            text = results["transcript"]
-                            if not results["language_code"] == "en":
-                                text = Google_Translate.detect_and_translate(text)
-                            sentiment_output_value = inference(text, "Sentiment + Score")
-                            st.markdown("#### "+ sentiment_output_value)
-                            
-                            
-                            # Sort emotions by confidenc
-                            
-                            # Add a note about the analysis
-                            st.info("""
-                                Note: This is a demonstration of voice emotion analysis. 
-                                For more accurate results, consider using a dedicated voice emotion recognition model.
-                            """)
-                            
-                        except Exception as e:
-                            st.error(f"Error analyzing voice: {str(e)}")
-                            st.info("Please try recording again with clearer speech.")
-            except Exception as e:
-                st.error(f"Error saving recording: {str(e)}")
-    except Exception as e:
-        st.error(f"Error with microphone recorder: {str(e)}")
-        st.info("Please make sure your microphone is properly connected and accessible.")
+        if st.button("Analyze Voice Emotion", key="analyze_voice_btn"):
+            with st.spinner("Transcribing and analyzing..."):
+                result = Sarvam_STT.detect_and_translate(file_path)
+                transcript = result.get("transcript", "")
+                source_lang = result.get("language_code", "unknown")
 
-# Facial Detection Tab
+                if not transcript:
+                    st.error("No transcript returned from speech-to-text.")
+                else:
+                    st.markdown(f"**Transcript:** {transcript}")
+                    translated = transcript
+                    if source_lang and not source_lang.lower().startswith("en"):
+                        translated = Google_Translate.detect_and_translate(transcript)
+                        st.markdown(f"**Translated to English:** {translated}")
+
+                    render_sentiment_block(translated)
+
 with tab2:
-    st.header("Facial Detection")
-    
-    # Center the radio buttons
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        input_type = st.radio(
-            "Choose input type",
-            ["📹 Live Camera", "📸 Upload Image", "🎥 Upload Video"],
-            horizontal=True,
-            key="detection_type"
-        )
-    
-    # Camera feed section
-    if input_type == "📹 Live Camera":
-        # Center the camera feed
-        st.markdown('<div class="camera-feed">', unsafe_allow_html=True)
-        
-        # Create a placeholder for the camera feed
-        if st.session_state.frame_placeholder is None:
-            st.session_state.frame_placeholder = st.empty()
-        
-        # Camera control buttons
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📹 Start Camera"):
-                st.session_state.camera_running = True
-        with col2:
-            if st.button("⏹️ Stop Camera"):
-                st.session_state.camera_running = False
-                st.session_state.frame_placeholder.empty()
-        
-        # Camera feed display
-        if st.session_state.camera_running:
-            camera_frame = st.camera_input("", key="continuous_camera")
-            
-            if camera_frame is not None:
-                frame = Image.open(camera_frame)
-                unique_filename = f"images/{uuid.uuid4()}.jpg"
-                if not os.path.exists("images"):
-                    os.mkdir("images")
-                with open(unique_filename, "wb") as f:
-                    frame.save(unique_filename)
-                annotated_frame = annotate_emotions(unique_filename)
-                st.session_state.frame_placeholder.image(annotated_frame, use_container_width=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.subheader("Facial Detection")
+    mode = st.radio(
+        "Choose input",
+        ["📸 Upload Image", "📹 Live Camera"],
+        horizontal=True,
+        key="face_mode",
+    )
 
-    elif input_type == "📸 Upload Image":
-        st.markdown("""
-            <div class="feature-card">
-                <h3>Upload Image</h3>
-                <p>Analyze emotions from a static image</p>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.session_state.frame_placeholder is None:
-            st.session_state.frame_placeholder = st.empty()
-        
-        uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-        if uploaded_file is not None:
-            frame = Image.open(uploaded_file)
-            # st.image(frame, caption="Uploaded Image", use_container_width=True)
-            st.session_state.frame_placeholder.image(frame, use_container_width=True)
-            unique_filename = f"images/{uuid.uuid4()}.jpg"
-            if not os.path.exists("images"):
-                os.mkdir("images")
-            with open(unique_filename, "wb") as f:
-                frame.save(unique_filename)
-            annotated_frame = annotate_emotions(unique_filename)
-                    # Display the processed image
-            annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_RGB2BGR)
-            st.session_state.frame_placeholder.image(annotated_frame, use_container_width=True)
-            # st.image(annotated_frame, channels="BGR", caption="Processed Image with Emotion Detection", use_container_width=True)
+    image_bgr = None
+    if mode == "📸 Upload Image":
+        uploaded = st.file_uploader("Upload a face image", type=["jpg", "jpeg", "png"], key="face_upload")
+        if uploaded is not None:
+            image = Image.open(uploaded).convert("RGB")
+            image_bgr = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    else:
+        camera_file = st.camera_input("Capture photo", key="face_camera")
+        if camera_file is not None:
+            image = Image.open(camera_file).convert("RGB")
+            image_bgr = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+    if image_bgr is not None:
+        annotated, detections = analyze_face_emotions(image_bgr)
+        st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), use_container_width=True)
+        if detections:
+            df = pd.DataFrame(detections)
+            st.dataframe(df, use_container_width=True)
+            top_emotion = df["emotion"].value_counts().idxmax()
+            st.success(f"Detected primary facial emotion: {top_emotion.title()}")
         else:
-            st.warning("No faces detected in the image!")
-    
-    else:  # Video upload
-        st.markdown("""
-            <div class="feature-card">
-                <h3>Upload Video</h3>
-                <p>Analyze emotions from a video file</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        uploaded_video = st.file_uploader("Choose a video...", type=["mp4", "avi"])
-        if uploaded_video:
-            # Save uploaded video
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-                tmp_file.write(uploaded_video.getvalue())
-                video_path = tmp_file.name
-            if st.session_state.frame_placeholder is None:
-                st.session_state.frame_placeholder = st.empty()
-            
-            # Display video
-            st.video(uploaded_video)
-            
-            if st.button("🔍 Analyze Video"):
-                with st.spinner("Processing video..."):
-                    # Process video frames
-                    cap = cv2.VideoCapture(video_path)
-                    while cap.isOpened():
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
-                        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        annotated_frame = frame.copy()
-                        annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_RGB2BGR)
-                        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30),flags=cv2.CASCADE_SCALE_IMAGE)
+            st.warning("No face detected. Try a clearer image with a visible face.")
 
-                        for (x, y, w, h) in faces:
-                            cv2.rectangle(annotated_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                            face = gray[y:y + h, x:x + w]
-                            face = cv2.cvtColor(face, cv2.COLOR_GRAY2RGB)  # Convert grayscale to RGB
-                            face = cv2.resize(face, (224, 224))
-                            face = face.astype("float") / 255.0
-                            face = img_to_array(face)
-                            face = np.expand_dims(face, axis=0)
-
-                            prediction = classifier.predict(face)[0]
-                            emotion = emotion_labels[np.argmax(prediction)]
-
-                            cv2.putText(annotated_frame, emotion, (x, y-30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (225, 0, 200), 2)
-                        
-                        st.image(annotated_frame, channels="BGR", caption="Processed Video Frame", use_container_width=True)
-                    
-                    cap.release()
-
-# Heart Rate Monitor Tab
 with tab3:
-    st.header("Heart Rate Monitor")
-    
-    # Stylish header
-    st.markdown("""
-        <div class="feature-card">
-            <h3>Real-time Heart Rate Monitoring</h3>
-            <p>Track your heart rate patterns for emotional insights</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Upload CSV
-    uploaded_hr = st.file_uploader("Upload heart rate data (CSV)", type=["csv"])
-    
-    if uploaded_hr:
-        import numpy as np
-        
-        # Read CSV
-        hr_data = pd.read_csv(uploaded_hr)
+    st.subheader("Heart Rate Monitor")
+    st.info("Upload a CSV file with heart rate values. Supported columns: heart, heart_rate, bpm, pulse.")
+    uploaded_csv = st.file_uploader("Upload heart rate CSV", type=["csv"], key="hr_csv")
 
-        # Normalize column names
-        hr_data.columns = [col.lower() for col in hr_data.columns]
-
-        # Possible column names
-        possible_cols = ["heart", "heart_rate", "bpm", "pulse"]
-
+    if uploaded_csv is not None:
+        hr_data = pd.read_csv(uploaded_csv)
+        hr_data.columns = [c.strip().lower() for c in hr_data.columns]
         heart_col = None
-
-        for col in possible_cols:
+        for col in ["heart_rate", "heart", "bpm", "pulse"]:
             if col in hr_data.columns:
                 heart_col = col
                 break
-
-        # Assign heart_rate column
-        if heart_col:
-            hr_data["heart_rate"] = hr_data[heart_col]
+        if heart_col is None:
+            st.error("Could not find a heart rate column.")
         else:
-            numeric_cols = hr_data.select_dtypes(include=['number']).columns
+            hr_data["heart_rate"] = pd.to_numeric(hr_data[heart_col], errors="coerce")
+            hr_data = hr_data.dropna(subset=["heart_rate"]).reset_index(drop=True)
+            if "time" not in hr_data.columns:
+                hr_data["time"] = np.arange(len(hr_data))
 
-            if len(numeric_cols) > 0:
-                hr_data["heart_rate"] = hr_data[numeric_cols[0]]
-            else:
-                # Fallback random data
-                hr_data["heart_rate"] = np.random.randint(60, 100, size=len(hr_data))
-
-        # Ensure time column
-        if "time" not in hr_data.columns:
-            hr_data["time"] = range(len(hr_data))
-
-        # Plot graph
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=hr_data["time"],
-            y=hr_data['heart_rate'],
-            mode='lines+markers',
-            name='Heart Rate',
-            line=dict(color='#FF6B6B', width=3),
-            marker=dict(color='#FF8E53', size=8)
-        ))
-
-        fig.update_layout(
-            title='Heart Rate Analysis',
-            xaxis_title='Time',
-            yaxis_title='Heart Rate (BPM)',
-            height=400,
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#2c3e50')
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Metrics
-        avg_hr = hr_data['heart_rate'].mean()
-        max_hr = hr_data['heart_rate'].max()
-        min_hr = hr_data['heart_rate'].min()
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric("Average Heart Rate", f"{avg_hr:.1f} BPM")
-
-        with col2:
-            st.metric("Maximum Heart Rate", f"{max_hr:.1f} BPM")
-
-        with col3:
-            st.metric("Minimum Heart Rate", f"{min_hr:.1f} BPM")
-
-        # Status
-        if avg_hr < 60:
-            st.warning("⚠️ Average heart rate is below normal range")
-        elif avg_hr > 100:
-            st.warning("⚠️ Average heart rate is above normal range")
-        else:
-            st.success("✅ Average heart rate is within normal range")
-
-    else:
-        if st.button("❤️ Start Live Heart Rate Monitoring"):
-            import numpy as np
-
-            # Generate sample data
-            time_vals = np.linspace(0, 10, 100)
-            heart_rate = 70 + 5 * np.sin(time_vals) + np.random.normal(0, 1, 100)
-
-            # Plot
             fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=time_vals,
-                y=heart_rate,
-                mode='lines+markers',
-                name='Heart Rate',
-                line=dict(color='#FF6B6B', width=3),
-                marker=dict(color='#FF8E53', size=8)
-            ))
-
-            fig.update_layout(
-                title='Real-time Heart Rate',
-                xaxis_title='Time (seconds)',
-                yaxis_title='Heart Rate (BPM)',
-                height=400,
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#2c3e50')
+            fig.add_trace(
+                go.Scatter(
+                    x=hr_data["time"],
+                    y=hr_data["heart_rate"],
+                    mode="lines+markers",
+                    name="Heart Rate",
+                )
             )
-
+            fig.update_layout(title="Heart Rate Trend", xaxis_title="Time", yaxis_title="BPM", height=420)
             st.plotly_chart(fig, use_container_width=True)
 
-            # Current HR
-            current_hr = heart_rate[-1]
+            avg_hr = hr_data["heart_rate"].mean()
+            max_hr = hr_data["heart_rate"].max()
+            min_hr = hr_data["heart_rate"].min()
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Average", f"{avg_hr:.1f} BPM")
+            m2.metric("Maximum", f"{max_hr:.1f} BPM")
+            m3.metric("Minimum", f"{min_hr:.1f} BPM")
 
-            st.markdown(f"""
-                <div class="metric-container">
-                    <h3>Current Heart Rate</h3>
-                    <h2 style="color: #FF6B6B;">{current_hr:.1f} BPM</h2>
-                </div>
-            """, unsafe_allow_html=True)
-
-            # Status
-            if current_hr < 60:
-                st.warning("⚠️ Heart rate is below normal range")
-            elif current_hr > 100:
-                st.warning("⚠️ Heart rate is above normal range")
+            if avg_hr < 60:
+                st.warning("Average heart rate is below the normal resting range.")
+            elif avg_hr > 100:
+                st.warning("Average heart rate is above the normal resting range.")
             else:
-                st.success("✅ Heart rate is within normal range")
-# AI Chat Tab
-# AI Chat Tab
+                st.success("Average heart rate is within the normal resting range.")
+    else:
+        st.caption("No CSV uploaded yet.")
+
 with tab4:
-    st.header("AI Chat")
-    
-    # Initialize chat history in session state if not exists
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
+    st.subheader("AI Chat")
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
 
-    st.markdown("""
-        <div class="feature-card">
-            <h3>Chat with AI Assistant</h3>
-            <p>Discuss your emotions and get personalized insights</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Display chat history
-    for message in st.session_state.chat_history:
-        role = "user" if message["role"] == "user" else "assistant"
-        with st.chat_message(role):
-            st.write(message["content"])
-
-    # Function to simulate AI response generation (streaming effect)
-    def generate_response(user_input):
-        # Fetch AI response using the ask_model function
-        full_response = ask_model(user_input)
-        
-        # Simulate typing by displaying the response character-by-character
-        streamed_response = ""
-        for char in full_response:
-            streamed_response += char
-            time.sleep(0.02)  # Simulate "thinking" delay between characters
-            yield streamed_response
-
-    # Chat input section
-    user_input = st.chat_input("Type your message here...")
-
-    if user_input:
-        # Add user message to chat history and display it
-        st.session_state.chat_history.append({"role": "user", "content": user_input})
+    prompt = st.chat_input("Type how you are feeling...", key="ai_chat_input")
+    if prompt:
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
-            st.write(user_input)
+            st.write(prompt)
 
-        # Stream the AI response
+        reply = build_supportive_reply(prompt)
         with st.chat_message("assistant"):
-            ai_response_placeholder = st.empty()  # Placeholder for streaming text
-            final_response = ""
-            for response in generate_response(st.session_state.chat_history):
-                ai_response_placeholder.write(response)  # Update the placeholder with each character
-                final_response = response
-            
-            # Once done, finalize the actual response in the chat history
-            st.session_state.chat_history.append({"role": "assistant", "content": final_response})
+            placeholder = st.empty()
+            current = ""
+            for ch in reply:
+                current += ch
+                placeholder.write(current)
+                time.sleep(0.01)
+        st.session_state.chat_history.append({"role": "assistant", "content": reply})
 
-    # Clear chat button
-    if st.button("🧹 Clear Chat"):
-        st.session_state.chat_history = []  # Clear the chat history
-        st.rerun()  # Rerun the app to refresh the UI immediately
+    if st.button("Clear Chat", key="clear_ai_chat"):
+        st.session_state.chat_history = []
+        st.rerun()
+
 with tab5:
-    st.header("Voice Chat")
-    
-    try:
-        audio = mic_recorder(
-            start_prompt="🎙️ Start Recording",
-            stop_prompt="⏹️ Stop Recording",
-            just_once=False,
-            use_container_width=True,
-            key='voice_recorder'
-        )
-        
-        if audio:
-            try:
-                recordings_folder = "recordings"
-                os.makedirs(recordings_folder, exist_ok=True)
-                unique_filename = f"recording_{uuid.uuid4().hex}.wav"
-                file_path = os.path.join(recordings_folder, unique_filename)
-                
-                # Save and play audio with better styling
-                audio_bytes = audio["bytes"]
-                st.markdown("""
-                    <div class="metric-container">
-                        <h4>🎵 Your Recording</h4>
-                """, unsafe_allow_html=True)
-                st.audio(audio_bytes, format="audio/wav")
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-                with open(file_path, "wb") as f:
-                    f.write(audio_bytes)
-        
-                # Analyze emotion directly from audio features
-                if st.button("🔍 send"):
-                    with st.spinner("Processing....."):
-                        try:
-                            # For now, we'll use a simulated emotion detection
-                            # In a real implementation, you would use a voice emotion detection model
-                            
+    st.subheader("Voice Chat")
+    voice_audio = mic_recorder(
+        start_prompt="🎙️ Start Voice Chat",
+        stop_prompt="⏹️ Stop Recording",
+        just_once=False,
+        use_container_width=True,
+        key="voice_chat_recorder",
+    )
 
+    if voice_audio:
+        voice_bytes = voice_audio["bytes"]
+        st.audio(voice_bytes, format="audio/wav")
+        voice_path = save_audio_bytes(voice_bytes)
 
-                            results = Sarvam_STT.detect_and_translate(file_path)
-                            st.markdown(f"### {results['transcript']}")
-                            text = results["transcript"]
-                            tar_lang = "en"
-                            if not results["language_code"] == "en":
-                                text,tar_lang = Google_Translate.change_to_target(text,"en")
-                            st.markdown(f"### {text}")
-                            try:
-                                response = ask_model(text)
-                                if not tar_lang == "en":
-                                    response,tar_lang = Google_Translate.change_to_target(response,tar_lang)
-                                response_file = tts_tutorial.text_to_speech(response,tar_lang)
-                                with open(file_path, "rb") as f:
-                                    audio_bytes = f.read()
+        if st.button("Send Voice Message", key="send_voice_msg"):
+            with st.spinner("Listening and replying..."):
+                result = Sarvam_STT.detect_and_translate(voice_path)
+                transcript = result.get("transcript", "")
+                source_lang = result.get("language_code", "en")
 
-# Play the audio in Streamlit
-                                st.audio(audio_bytes, format="audio/wav")
-                            except Exception as e:
-                                st.write(f"Error Generating response")
+                if not transcript:
+                    st.error("Could not transcribe the voice input.")
+                else:
+                    english_text = transcript
+                    target_lang = "en"
+                    if source_lang and not source_lang.lower().startswith("en"):
+                        english_text, target_lang = Google_Translate.change_to_target(transcript, "en")
+                    st.markdown(f"**You said:** {transcript}")
 
-                                
-                        except Exception as e:
-                            st.write(f"Error Generating response")
-            except Exception as e:
-                st.error(f"Error processing audio: {e}")
-    except Exception as e:
-        st.error(f"Error with voice recording: {e}")
-# Footer with better styling
+                    reply_en = build_supportive_reply(english_text)
+                    final_text = reply_en
+                    output_lang = "en"
+                    if source_lang and not source_lang.lower().startswith("en"):
+                        final_text, output_lang = Google_Translate.change_to_target(reply_en, target_lang)
+
+                    st.markdown(f"**Clara:** {final_text}")
+                    try:
+                        audio_file = tts_tutorial.text_to_speech(final_text, output_lang)
+                        if audio_file and os.path.exists(audio_file):
+                            with open(audio_file, "rb") as f:
+                                st.audio(f.read(), format="audio/wav")
+                    except Exception as exc:
+                        st.warning(f"Reply text generated, but text-to-speech failed: {exc}")
+
 st.markdown("---")
-st.markdown("""
-    <div style='text-align: center; padding: 2rem; background: linear-gradient(45deg, #FF6B6B, #FF8E53); border-radius: 20px; color: white;'>
-        <p style='font-size: 1.2rem;'>Designed to understand you better 💙 </p>
-        <p style='font-size: 0.9rem;'>© 2026 Clara AI. All rights reserved.</p>
-    </div>
-""", unsafe_allow_html=True)
-
-st.markdown("</div></div>", unsafe_allow_html=True)
-
+st.markdown(
+    "<div class='card'><b>Clara AI</b><br/>Emotion-aware support for conversation, facial analysis, and multilingual voice interaction.</div>",
+    unsafe_allow_html=True,
+)

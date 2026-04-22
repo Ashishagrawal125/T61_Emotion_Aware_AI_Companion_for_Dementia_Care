@@ -1,241 +1,71 @@
-# 🧠 Emotion-Aware AI Companion for Dementia Care
+# 🧠 Clara AI - Emotion Aware Companion for Dementia Care
 
-An AI-powered companion system designed to provide emotional support, cognitive engagement, and caregiver insights for dementia patients using emotion recognition and conversational AI.
+Clara AI is a Streamlit-based prototype that helps support dementia care using emotion-aware interaction. It combines voice transcription, translation, facial emotion detection, text emotion analysis, supportive AI chat, and basic wellness insights in one interface.
 
----
+## Features
 
-## 📌 Project Overview
+- Voice recording and speech-to-text transcription
+- Multilingual translation to and from English
+- Voice emotion analysis using text emotion classification
+- Facial emotion detection from uploaded images or live camera
+- Supportive AI chat for calm and empathetic responses
+- Voice chat with text-to-speech reply generation
+- Heart-rate CSV visualization and summary metrics
 
-Dementia patients often experience memory loss, confusion, anxiety, and loneliness. Due to limited caregiver availability, continuous emotional support becomes difficult.
+## Tech Stack
 
-This project aims to build an **Emotion-Aware AI Companion** that recognizes emotional states and provides empathetic, personalized interactions.
+- **Frontend / App:** Streamlit
+- **Computer Vision:** OpenCV, DeepFace
+- **NLP / Emotion Analysis:** Transformers pipeline, FLAN-T5
+- **Speech:** Sarvam STT + TTS APIs
+- **Translation:** deep-translator, langdetect
+- **Data / Charts:** pandas, plotly
 
----
+## Project Files
 
-## 🎯 Objectives
+- `app.py` - main Streamlit application
+- `Sarvam_STT.py` - speech-to-text helper
+- `Google_Translate.py` - translation helper
+- `tts_tutorial.py` - text-to-speech helper
 
-- Detect emotions using voice and facial cues
-- Provide empathetic AI-based conversations
-- Offer daily reminders and cognitive activities
-- Enable caregiver monitoring via dashboard
-- Ensure ethical and secure data handling
+## Setup
 
----
-
-## 🚀 Key Features
-
-- ✅ Caregiver Authentication & Login
-- ✅ Patient Profile Management
-- ✅ Emotion Detection (Voice/Face/Text)
-- ✅ Empathetic AI Interaction
-- ✅ Daily Reminders
-- ✅ Cognitive Engagement Activities
-- ✅ Caregiver Dashboard & Analytics
-- ✅ Emotion Alerts System
-
----
-
-## 🛠️ Tech Stack
-
-### Backend
-- FastAPI / Node.js
-- Python (ML Models)
-- REST APIs
-- JWT Authentication
-
-### AI & ML
-- Emotion Recognition Models
-- NLP & LLM Integration
-- Sentiment Analysis
-
-### Database
-- MySQL
-- Object Storage (Images/Audio)
-
-### Frontend
-- Web Interface
-- HTML / CSS / JavaScript
-
-### Testing
-- PyTest
-- Jest
-- Playwright
-- Postman
-
----
-
-## 📐 System Architecture
-
-Client (Web UI)
-↓
-Emotion Engine → NLP Module → AI Response
-↓
-Database → Dashboard → Caregiver
-
-
----
-
-## 📊 Performance Targets
-
-| Metric              | Target        |
-|---------------------|---------------|
-| Emotion Accuracy    | ≥ 80%         |
-| Response Time       | ≤ 3 seconds   |
-| System Uptime       | ≥ 99%         |
-| Error Rate          | ≤ 1%          |
-
----
-
-## 🔗 API Endpoints (Sample)
-
-| Endpoint                    | Method | Purpose                 |
-|-----------------------------|--------|-------------------------|
-| /api/auth/login             | POST   | Caregiver Login         |
-| /api/patient/create         | POST   | Create Patient Profile |
-| /api/emotion/analyze        | POST   | Analyze Emotion         |
-| /api/interaction/respond    | POST   | Generate AI Response    |
-| /api/dashboard/emotions     | GET    | Get Emotion History     |
-
----
-```
-## 📁 Project Structure
-
-emotion-ai-companion/
-│
-├── backend/
-│ ├── auth/
-│ ├── api/
-│ ├── models/
-│ └── services/
-│
-├── ml/
-│ ├── emotion_detection/
-│ ├── nlp/
-│ └── training/
-│
-├── frontend/
-│ ├── components/
-│ ├── pages/
-│ └── assets/
-│
-├── database/
-│ └── migrations/
-│
-├── tests/
-│
-└── README.md
+```bash
+git clone <your-repo-url>
+cd T61_Emotion_Aware_AI_Companion_for_Dementia_Care
+python -m venv venv
 ```
 
----
+### Windows
 
-## ⚙️ Installation & Setup
-
-### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- MySQL
-- Git
----
-```
-### Clone Repository
-git clone https://github.com/your-username/emotion-ai-companion.git
-cd emotion-ai-companion
-
-  Backend Setup
-cd backend
+```bash
+venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --reload
-
-  Frontend Setup
-cd frontend
-npm install
-npm start
-Environment Variables
-Create .env file:
-
-DB_HOST=localhost
-DB_USER=root
-DB_PASS=yourpassword
-JWT_SECRET=yourkey
-MODEL_API_KEY=yourkey
 ```
----
-🧪 Testing
 
-Run tests using:
+### Linux / Mac
 
-pytest
+```bash
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-npm test
+## Environment Variables
 
-npx playwright test
----
-🔐 Security & Privacy
+Create a `.env` file or set environment variables in your terminal:
 
-Role-based authentication
+```env
+SARVAM_API_KEY=your_sarvam_api_key
+```
 
-Encrypted credentials
+## Run
 
-Anonymized patient data
+```bash
+streamlit run app.py
+```
 
-Secure API access
+## Notes
 
-No medical diagnosis
----
-📅 Development Timeline
-
-Week 1–2: Requirements & Design
-
-Week 3–4: Backend & Emotion Engine
-
-Week 5–6: AI Integration & Dashboard
-
-Week 7: Testing & Optimization
-
-Week 8: Final Release
----
-⚠️ Limitations
-
-Prototype-level deployment
-
-Limited real patient data
-
-No clinical validation
-
-Web-based version only (v1)
----
-  👥 Team
-Name	    Role
-Ashish	Project Lead
-
-Ashish	ML Engineer
-
-Shruti	Backend Developer
-
-Aashi	  QA & Documentation
----
-📜 Compliance
-Academic Research Project
-
-Institutional Ethics Guidelines
-
-No Third-Party Data Sharing
-
-No Clinical Decision Making
----
-📈 Future Enhancements
-Mobile App Support
-
-Advanced Emotion Models
-
-Multilingual Support
-
-Wearable Integration
----
-Real-time Medical Alerts
-⭐ If you find this project useful, please star the repository!
-
-
----
-
-
+- The previous version had hardcoded API keys and unstable logic in voice chat, heart-rate handling, and emotion flow. This updated version removes those issues and makes the app safer and easier to run.
+- For best facial analysis results, use a clear front-facing image.
+- If Sarvam API keys are missing, voice features will not work until you add them.
