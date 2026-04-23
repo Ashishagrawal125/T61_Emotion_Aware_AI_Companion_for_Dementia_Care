@@ -84,35 +84,22 @@ This project presents an **Emotion-Aware AI Companion** that combines Computer V
 ---
 
 ## 🔄 System Workflow
-+---------------------------+
-| User Input |
-| (Voice / Face / Text) |
-+---------------------------+
-|
-v
-+---------------------------+
-| Emotion Detection |
-| (DeepFace / NLP) |
-+---------------------------+
-|
-v
-+---------------------------+
-| AI Processing |
-| (LLM / GPT / Groq) |
-+---------------------------+
-|
-v
-+---------------------------+
-| Response Generation |
-+---------------------------+
-|
-v
-+---------------------------+
-| Dashboard & Alerts |
-+---------------------------+
+User Input (Voice / Face / Text)
+│
+▼
+Emotion Detection (DeepFace / NLP)
+│
+▼
+AI Processing (LLM / GPT / Groq)
+│
+▼
+Response Generation
+│
+▼
+Dashboard & Alerts
 
 ---
-
+ 
 ## 🏗️ Architecture Overview
 
 - **Client Layer**: Web UI (Patient & Caregiver Interface)
@@ -158,18 +145,19 @@ v
 - Environment variables for API keys  
 
 ---
-
 ## 📂 Project Structure
+
+
 EmotionAware/
-│── app.py
-│── services/
-│── utils/
-│── tests/
-│── docs/
-│── sample_data/
-│── User-Interface/
-│── Facial-Expressions-Recognition/
-│── Conversation-Module/
+├── app.py
+├── services/
+├── utils/
+├── tests/
+├── docs/
+├── sample_data/
+├── User-Interface/
+├── Facial-Expressions-Recognition/
+└── Conversation-Module/
 
 ---
 
