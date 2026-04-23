@@ -1,0 +1,15 @@
+.env
+*.env
+
+node_modules/
+.next/
+
+venv/
+backend/venv/
+__pycache__/
+*.pyc
+
+.vscode/
+
+*.log
+temp_*

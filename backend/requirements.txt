@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+groq
+python-multipart
+openai-whisper
+opencv-python
+deepface
+torch
+python-dotenv
