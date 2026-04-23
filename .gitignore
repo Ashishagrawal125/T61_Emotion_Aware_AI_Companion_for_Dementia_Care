@@ -1,15 +1,27 @@
+# Environment
 .env
 *.env
 
+# Node / Next.js
 node_modules/
 .next/
+out/
 
+# Python
 venv/
 backend/venv/
 __pycache__/
 *.pyc
 
+# Editor
 .vscode/
 
+# Logs
 *.log
+
+# Temp
 temp_*
+
+# OS
+.DS_Store
+Thumbs.db
