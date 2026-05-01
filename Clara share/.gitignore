@@ -1,0 +1,36 @@
+# Environments
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node modules
+node_modules/
+dist/
+.next/
+out/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv
+venv/
+ENV/
+env/
+.pytest_cache/
+
+# Databases
+*.db
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project specific
+backend/sms_alerts.log
+backend/Clara_AI_Official_Report.pdf
+backend/Clara_AI_Technical_Report.pdf
