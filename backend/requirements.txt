@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+groq
+python-multipart
+openai-whisper
+opencv-python
+deepface
+torch
+python-dotenv
+sqlalchemy
+python-jose[cryptography]
+passlib[bcrypt]
+requests
+tf-keras
+twilio
