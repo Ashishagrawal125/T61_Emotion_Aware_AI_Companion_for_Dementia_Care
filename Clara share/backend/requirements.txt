@@ -11,5 +11,5 @@ sqlalchemy
 python-jose[cryptography]
 passlib[bcrypt]
 requests
-tf-keras
 twilio
+email-validator
